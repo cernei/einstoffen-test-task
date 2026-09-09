@@ -1,31 +1,34 @@
-### Business logic
+### System design considerations:
+1) Decoupling payment and shipping services. Using asynchronous workflow by using queue.
+     - Its necessary because a failure or latency spike in a third-party shipping API should not block customers from completing checkouts and paying for goods
+2) Extensive logging
+3) Sufficient error handling, handling edge cases.
 
-Triggering shipment api decoupled from invoices web hook.
+### UI
+Just go to main page (`/`) where dashboard is located
 
+### Note
+ - shipping api is done through serverless php function
+ - Reload the page manually to see invoices and log changes
 
-Payment API --[event]--> Events 
-                            ^    
-                            |
-                        ShipmentJob -------> Shipment API
-                            ^
-                            |
-                         Worker
+### Installation
 
-
-
-
-```mermaid
-flowchart LR
-    Payment["Payment API"] -->|event| Events["Events"]
-    Events --> Shipment["Shipment API"]
-    Worker["Worker"] --> Events
-```
-
-### API
-/api/shippment-mock/ok
-/api/shippment-mock/failure
-/api/shippment-mock/timeout
-###
 ```bash
+mv .env.example .env
+
+cd docker
+mv .env.example .env
+
+# here adjust port of the caddy webserver if your 80 port is occupied
 docker compose up -d
+
+docker exec -it einstoffen-php-1 bash
+
+# now everything inside php container
+composer install
+
+chown -R www-data:www-data /var/www/html/writable
+chmod -R 755 /var/www/html/writable
+
+php spark migrate
 ```
