@@ -5,73 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Invoice Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {brand: "#2563eb", mist: "#f6f8fc"},
-                    boxShadow: {card: "0 18px 45px rgba(28, 39, 64, 0.08)"}
-                }
-            }
-        };</script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.min.css" rel="stylesheet" type="text/css" />
 </head>
-<body class="min-h-screen bg-mist text-slate-900 antialiased">
-<main class="mx-auto flex min-h-screen w-full flex-col px-5 py-8 sm:px-8 lg:px-10">
-    <div class="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight sm:text-2xl">Dashboard</h1>
-        </div>
+<body class="min-h-screen bg-mist text-slate-900 antialiased bg-[#FDFDFD]">
+<main class="mx-auto min-h-screen w-full flex-col px-5 py-8 sm:px-8 lg:px-10">
 
-    </div>
-    <div class="grid gap-6 lg:grid-cols-[25%_75%] lg:items-start">
-
-        <section class="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-card sm:p-8">
+    <div class="grid gap-x-6 gap-y-2 grid-cols-[1fr_3fr] items-start">
+        <section>
             <h2 class="text-lg font-bold text-slate-900">Invoice event</h2>
-            <label class="mt-4 block text-sm font-semibold text-slate-700" for="invoice-body">Request body</label>
-            <textarea id="invoice-body"
-                      class="mt-2 min-h-64 w-full rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-sm text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
-                      spellcheck="false" aria-describedby="invoice-body-help">
-            </textarea>
-            <p id="invoice-body-help" class="mt-2 text-xs text-slate-500">
-                Enter the JSON body for the invoice request.
-            </p>
-            <button id="send-invoice"
-                    class="mt-4 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-wait disabled:opacity-60"
+            <p class="mt-1 text-sm text-slate-500">Send a fetch request to add an invoice</p>
+        </section>
+        <section class="flex justify-between w-full">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">Invoices</h2>
+                <p class="mt-1 text-sm text-slate-500">Reload the page for refresh</p>
+            </div>
+            <div class="text-center flex items-center gap-5">
+                <span class="text-sm text-slate-500 ">Run &quot;worker&quot; to handle invoices, takes one job at a time; cases &rarr;</span>
+
+                <button id="worker-ok"
+                    class="btn btn-neutral btn-outline rounded-none"
                     type="button">
-                Send invoice
-            </button>
-            <div class="mt-3">
-                <pre id="query-result" class="mt-4 max-h-80 min-h-24 overflow-auto rounded-xl bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100" role="status" aria-live="polite">Run the query to load invoice results.</pre>
+                    OK
+                </button>
+                <button id="worker-error"
+                    class="btn btn-neutral btn-outline  rounded-none"
+                    type="button">
+                    Error
+                </button>
+                <button id="worker-timeout"
+                    class="btn btn-neutral btn-outline rounded-none"
+                    type="button">
+                    Timeout
+                </button>
+            </div>
+
+        </section>
+        <section class="min-w-0">
+
+            <div class="rounded-none border border-slate-200/80 bg-white p-6 shadow-card ">
+                <label class="block text-sm font-semibold text-slate-700" for="invoice-body">Request body</label>
+                <textarea id="invoice-body"
+                          class="mt-2 min-h-64 w-full  border border-slate-200 bg-slate-50 p-4 font-mono text-sm text-slate-800 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                          spellcheck="false" aria-describedby="invoice-body-help">
+                </textarea>
+                <p id="invoice-body-help" class="mt-2 text-xs text-slate-500">
+                    Enter the JSON body for the invoice request.
+                </p>
+                <button id="send-invoice"
+                        class="mt-4 btn rounded-none btn-neutral btn-outline"
+                        type="button">
+                    Send invoice
+                </button>
+                <p id="invoice-body-help" class="mt-6 text-xs text-slate-500">
+                    Output:
+                </p>
+                <div class="">
+                    <pre id="query-result" class="mt-4 max-h-80 min-h-24 overflow-auto bg-slate-950 p-4 font-mono text-xs leading-6 text-slate-100" role="status" aria-live="polite">Run the query to load invoice results.</pre>
+                </div>
             </div>
         </section>
-        <section>
-            <div class="py-2 flex justify-between w-full">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-900">Invoices</h2>
-                    <p class="mt-1 text-sm text-slate-500">Reload the page for refresh</p>
-                </div>
-                <div class="text-center">
-                    <span class=" text-slate-500 pr-5">Run &quot;worker&quot;, takes one job at a time; cases &rarr;</span>
-
-                    <button id="worker-ok"
-                        class="mt-4 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-wait disabled:opacity-60"
-                        type="button">
-                        OK
-                    </button>
-                    <button id="worker-error"
-                        class="mt-4 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-wait disabled:opacity-60"
-                        type="button">
-                        Error
-                    </button>
-                    <button id="worker-timeout"
-                        class="mt-4 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-wait disabled:opacity-60"
-                        type="button">
-                        Timeout
-                    </button>
-                </div>
-            </div>
-
-            <div class="overflow-x-auto rounded-3xl border border-slate-200/80 bg-white p-6 shadow-card sm:p-8">
-                <table class="min-w-full divide-y divide-slate-100 text-left">
+        <section class="min-w-0">
+            <div class="overflow-x-auto rounded-none border border-slate-200/80 bg-white p-6 shadow-card sm:p-8">
+                <table class="table">
                     <thead class="bg-slate-50/80">
                     <tr class="transition-colors hover:bg-blue-50/40">
                         <th class="whitespace-nowrap px-5 py-4">Invoice ID</th>
@@ -108,11 +104,12 @@
                 </table>
             </div>
             <div>
-                <h2 class="text-lg font-bold text-slate-900 pt-5 pb-2">Log</h2>
+                <h2 class="text-lg font-bold text-slate-900 pt-8">Log</h2>
+                <p class="py-2 text-sm text-slate-500">All events log</p>
             </div>
-            <div class="overflow-x-auto rounded-3xl border border-slate-200/80 bg-white p-6 shadow-card sm:p-8">
+            <div class="overflow-x-auto border border-slate-200/80 bg-white p-6 shadow-card sm:p-8">
 
-                <table class="min-w-full divide-y divide-slate-100 text-left">
+                <table class="table">
                     <thead class="bg-slate-50/80">
                     <tr class="transition-colors hover:bg-blue-50/40">
                         <th class="whitespace-nowrap px-5 py-4">Name</th>
