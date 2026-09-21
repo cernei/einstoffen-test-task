@@ -2,19 +2,17 @@
 
 namespace App\Controllers;
 
-use App\Jobs\ShipmentJob;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class JobTest extends BaseController
 {
-    public function shipment($case): ResponseInterface
+    public function shipment(): ResponseInterface
     {
-        $job = new ShipmentJob($case);
-        $job->handle();
+        command('queue:work shipments -max-jobs 1 --stop-when-empty');
 
-        return $this->response->setStatusCode(201)->setJSON([
-            'message' => 'Job ran successfully.',
+        return $this->response->setJSON([
+            'status' => 'success',
+            'message' => 'Processed pending jobs in the shipments queue.'
         ]);
     }
-
 }

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Invoice Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.min.css" rel="stylesheet" type="text/css"/>
+</head>
+<body class="min-h-screen bg-mist bg-[#FDFDFD] text-slate-900 antialiased">
+<main id="dashboard" class="mx-auto min-h-screen w-full px-5 py-8 sm:px-8 lg:px-10">
+    <section class="flex w-full flex-wrap items-center justify-between gap-4">
+        <button class="btn rounded-none btn-neutral btn-outline" type="button" :disabled="loading.batch" @click="sendInvoices">
+            {{ loading.batch ? 'Sending...' : 'Send batch of invoices' }}
+        </button>
+        <button class="btn rounded-none btn-neutral btn-outline" type="button" :disabled="loading.clear" @click="clearAll">
+            {{ loading.clear ? 'Clearing...' : 'Clear all' }}
+        </button>
+        <div class="flex items-center gap-5 text-center">
+            <span class="text-sm text-slate-500">Run two workers simultaneously to handle invoices, one job per worker -&gt;</span>
+            <button class="btn rounded-none btn-neutral btn-outline" type="button" :disabled="loading.workers" @click="runWorkers">
+                {{ loading.workers ? 'Running...' : 'Start' }}
+            </button>
+        </div>
+    </section>
+    <p v-if="error" class="mt-5 border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">{{ error }}</p>
+    <section class="mt-3 min-w-0">
+        <div v-if="loading.tables" class="py-12 text-center text-sm text-slate-500">Loading dashboard...</div>
+        <div v-for="(rows, tableName) in tables" :key="tableName">
+            <h2 class="pt-8 text-lg font-bold text-slate-900">{{ tableName }}</h2>
+            <div class="overflow-x-auto rounded-none mt-2">
+                <table class="table table-sm">
+                    <thead v-if="rows.length" class="bg-slate-50/80">
+                    <tr class="transition-colors hover:bg-blue-50/40">
+                        <th v-for="column in columns(rows)" :key="column" class="whitespace-nowrap">{{ column }}</th>
+                    </tr>
+                    </thead>
+                    <tbody v-if="rows.length">
+                    <tr v-for="(row, rowIndex) in rows" :key="row.id ?? rowIndex" class="transition-colors hover:bg-blue-50/40">
+                        <td v-for="column in columns(rows)" :key="column" class="whitespace-nowrap text-sm text-slate-700">{{ displayValue(row[column], column) }}</td>
+                    </tr>
+                    </tbody>
+                    <tbody v-else>
+                    <tr class="transition-colors hover:bg-blue-50/40">
+                        <td class="px-5 py-14 text-center">
+                            <p class="text-sm font-semibold text-slate-900">No {{ tableName }} yet</p>
+                            <p class="mt-1 text-sm text-slate-500">New {{ tableName }} records will appear here.</p>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+    const { createApp, reactive, ref } = Vue;
+    createApp({
+        setup() {
+            const autoReload = ref(true);
+            const error = ref('');
+            const tables = reactive({ invoices: [], jobs: [], failedJobs: [], eventLog: [] });
+            const loading = reactive({ tables: true, batch: false, clear: false, workers: false });
+            const invoiceTemplate = {
+                event: 'invoice.created',
+                customer: { id: 'CUST-4711', name: 'Muster Optik GmbH', email: 'kontakt@musteroptik.example' },
+                amount: 249.90,
+                currency: 'CHF',
+                status: 'open',
+                due_date: '2026-10-15',
+                created_at: '2026-09-08T10:15:00Z'
+            };
+            function columns(rows) { return rows.length ? Object.keys(rows[0]) : []; }
+            function displayValue(value, column = '') {
+                if (value === null || value === undefined) return '';
+                if (typeof value === 'object') return JSON.stringify(value);
+                if (typeof value !== 'string' || !isDateColumn(column)) return value;
+
+                const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+                if (dateOnly) {
+                    const [, year, month, day] = dateOnly;
+                    return new Intl.DateTimeFormat(undefined, {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    }).format(new Date(Number(year), Number(month) - 1, Number(day)));
+                }
+
+                if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value)) return value;
+
+                const date = new Date(value.includes('T') ? value : value.replace(' ', 'T') + 'Z');
+                if (Number.isNaN(date.getTime())) return value;
+
+                return new Intl.DateTimeFormat(undefined, {
+                    dateStyle: 'medium',
+                    timeStyle: 'medium'
+                }).format(date);
+            }
+            function isDateColumn(column) {
+                return /(?:^|_)(?:date|at|on|time|timestamp)$/.test(column.toLowerCase());
+            }
+            async function fetchTables() {
+                const response = await fetch('/api/data');
+                if (!response.ok) throw new Error(`Unable to load dashboard data (${response.status}).`);
+                const data = await response.json();
+                Object.keys(tables).forEach((tableName) => {
+                    tables[tableName] = Array.isArray(data[tableName]) ? data[tableName] : [];
+                });
+            }
+            async function apiRequest(urls, requestOptions = {}, action = null) {
+                const requestUrls = Array.isArray(urls) ? urls : [urls];
+                if (action) loading[action] = true;
+                error.value = '';
+                try {
+                    const responses = await Promise.all(requestUrls.map((url, index) => {
+                        const options = typeof requestOptions === 'function' ? requestOptions(url, index) : requestOptions;
+                        return fetch(url, options);
+                    }));
+                    const failedResponse = responses.find((response) => !response.ok);
+                    if (failedResponse) throw new Error('Request failed (' + failedResponse.status + ').');
+                    return responses;
+                } catch (requestError) {
+                    error.value = requestError.message || 'Unable to complete request.';
+                } finally {
+                    try {
+                        await fetchTables();
+                    } catch (tableError) {
+                        error.value = tableError.message || 'Unable to refresh dashboard data.';
+                    }
+                    if (action) loading[action] = false;
+                }
+            }
+            async function sendInvoices() {
+                const testCases = ['ok', 'ok-or-server-error', 'bad-json', 'validation-error', 'bad-response', 'server-error', 'timeout'];
+                await apiRequest(
+                    testCases.map(() => '/api/invoices'),
+                    (url, index) => ({
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...invoiceTemplate, invoice_id: `INV-2026-0${index}`, comment: testCases[index] }) // ${index}
+                    }),
+                    'batch'
+                );
+            }
+            async function clearAll() { await apiRequest('/api/clear-all', {}, 'clear'); }
+            async function runWorkers() {
+                await apiRequest(['/api/shipment-job-test', '/api/shipment-job-test'], {}, 'workers');
+            }
+            fetchTables()
+                .catch((requestError) => { error.value = requestError.message || 'Unable to load dashboard data.'; })
+                .finally(() => { loading.tables = false; });
+            return { autoReload, clearAll, columns, displayValue, error, loading, runWorkers, sendInvoices, tables };
+        }
+    }).mount('#dashboard');
+</script>
+</body>
+</html>

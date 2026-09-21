@@ -15,6 +15,11 @@ class CreateEventLogTable extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            'entity_id' => [
+                'type'           => 'INT',
+                'constraint'     => 11,
+                'unsigned'       => true,
+            ],
             'name' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
@@ -29,6 +34,7 @@ class CreateEventLogTable extends Migration
         ]);
 
         $this->forge->addKey('id', true);
+        $this->forge->addKey('entity_id');
         $this->forge->createTable('event_log');
     }
 

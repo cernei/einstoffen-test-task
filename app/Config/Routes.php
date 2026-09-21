@@ -4,8 +4,10 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 $routes->get('/', 'Home::index');
+$routes->get('/api/data', 'Home::data');
 
+$routes->get('api/clear-all', 'Home::clearAll');
 $routes->get('api/invoices', 'Invoices::index');
 $routes->post('api/invoices', 'Invoices::store');
 
-$routes->get('api/shipment-job-test/(:segment)', 'JobTest::shipment/$1');
+$routes->get('api/shipment-job-test', 'JobTest::shipment');

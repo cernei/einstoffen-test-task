@@ -46,17 +46,17 @@ class CreateInvoicesTable extends Migration
             'due_date' => [
                 'type' => 'DATE',
             ],
+            'comment' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 255,
+            ],
             'shipping_status' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 50,
             ],
-            'shipping_reference' => [
+            'shipping_info' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 256,
-            ],
-            'shipping_status_updated_at' => [
-                'type' => 'DATETIME',
-                'null' => true,
             ],
             'created_at' => [
                 'type' => 'DATETIME',
@@ -69,6 +69,7 @@ class CreateInvoicesTable extends Migration
         ]);
 
         $this->forge->addKey('id', true);
+        $this->forge->addUniqueKey('invoice_id');
         $this->forge->createTable('invoices');
     }
 
